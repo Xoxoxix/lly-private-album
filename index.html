@@ -168,6 +168,21 @@
 .media-date { color: #555; font-size: 11px; margin-top: 4px; }
 .empty-state { grid-column: 1 / -1; text-align: center; padding: 50px 20px; color: #666; background: #1a1a1a; border-radius: 10px; border: 1px dashed #333; }
 .empty-icon { font-size: 48px; margin-bottom: 15px; opacity: 0.25; }
+.delete-btn {
+    background: rgba(255, 75, 75, 0.1);
+    color: #ff6b6b;
+    border: 1px solid rgba(255, 75, 75, 0.3);
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    margin-top: 8px;
+    transition: all 0.2s;
+}
+.delete-btn:hover {
+    background: rgba(255, 75, 75, 0.2);
+    border-color: rgba(255, 75, 75, 0.5);
+}
 .modal {
             display: none;
             position: fixed;
@@ -419,18 +434,19 @@ function createMediaItem(file, imageUrl) {
     const mediaItem = document.createElement('div');
     mediaItem.className = 'media-item fade-in';
     mediaItem.innerHTML = `
-        ${mediaContent}
-        <div class="media-badge">${typeInfo.badge}</div>
-        <div class="media-protection">
-            <div class="protection-icon">🔒</div>
-            <div class="protection-text">此${typeInfo.name}受保护<br>需要密码才能解锁下载</div>
-            <button class="unlock-btn" onclick="requestUnlock(${unlockStates.length})">解锁下载</button>
-        </div>
-        <div class="media-info">
-            <div class="media-type">${typeInfo.icon} ${typeInfo.name}</div>
-            <strong>${file.name}</strong>
-            <div class="media-date">${uploadDate}</div>
-        </div>
+    ${mediaContent}
+    <div class="media-badge">${typeInfo.badge}</div>
+    <div class="media-protection">
+        <div class="protection-icon">🔒</div>
+        <div class="protection-text">此${typeInfo.name}受保护<br>需要密码才能解锁下载</div>
+        <button class="unlock-btn" onclick="requestUnlock(${unlockStates.length})">解锁下载</button>
+    </div>
+    <div class="media-info">
+        <div class="media-type">${typeInfo.icon} ${typeInfo.name}</div>
+        <strong>${file.name}</strong>
+        <div class="media-date">${uploadDate}</div>
+        <button class="delete-btn" onclick="deleteMedia(${unlockStates.length})">🗑️ 删除</button>
+    </div>
     `;
     gallery.appendChild(mediaItem);
 }
@@ -524,6 +540,30 @@ function loadMedia() {
     window.addEventListener('load', function() {
         document.getElementById('password').focus();
     });
+    // ==================== 删除功能 ====================
+    function deleteMedia(index) {
+        if (confirm('确定要删除这个文件吗？此操作不可恢复！')) {
+            const mediaItems = document.querySelectorAll('.media-item');
+            if (mediaItems[index]) {
+                mediaItems[index].remove();
+                unlockStates.splice(index, 1);
+                saveToLocal();
+                alert('✅ 文件删除成功！');
+             
+                // 如果删完了显示空状态
+                const gallery = document.getElementById('mediaGallery');
+                if (gallery.children.length === 0) {
+                    gallery.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">🖼️</div>
+                            <h3>还没有内容</h3>
+                            <p>上传第一个文件开始你的秘密基地吧！</p>
+                        </div>
+                   `;
+                }
+            }
+        }
+    }
 </script>
 </body>
 </html>
