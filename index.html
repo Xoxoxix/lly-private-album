@@ -607,6 +607,18 @@
             font-size: 13px;
             color: #aaa;
         }
+
+        .transfer-warning {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(255, 165, 0, 0.9);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            z-index: 3;
+        }
     </style>
 </head>
 <body>
@@ -638,7 +650,7 @@
                     <div class="stat-label">总照片数</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-value" id="activeHosts">3</div>
+                    <div class="stat-value" id="activeHosts">4</div>
                     <div class="stat-label">可用图床</div>
                 </div>
                 <div class="stat-item">
@@ -754,20 +766,29 @@
                     name: 'imgbb', 
                     upload: this.uploadToImgBB.bind(this), 
                     healthy: true, 
-                    weight: 40,
-                    needsKey: true
+                    weight: 30,
+                    supportsVideo: false
                 },
                 { 
                     name: 'catbox', 
                     upload: this.uploadToCatbox.bind(this), 
                     healthy: true, 
-                    weight: 35 
+                    weight: 25,
+                    supportsVideo: false
                 },
                 { 
                     name: 'freeimage', 
                     upload: this.uploadToFreeImage.bind(this), 
                     healthy: true, 
-                    weight: 25 
+                    weight: 25,
+                    supportsVideo: false
+                },
+                { 
+                    name: 'transfer', 
+                    upload: this.uploadToTransfer.bind(this), 
+                    healthy: true, 
+                    weight: 20,
+                    supportsVideo: true
                 }
             ];
             this.failedHosts = new Set();
@@ -843,37 +864,100 @@
             }
         }
 
-        async uploadWithFallback(file) {
-            // 如果是本地环境，使用Data URL（仅用于测试）
-            if (window.location.protocol === 'file:') {
-                return new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        resolve({ url: e.target.result, host: 'local' });
-                    };
-                    reader.readAsDataURL(file);
-                });
-            }
-
-            const healthyHosts = this.hosts.filter(h => h.healthy && !this.failedHosts.has(h.name));
+        async uploadToTransfer(file) {
+            console.log('🔄 使用Transfer.sh上传视频...', file.name);
             
+            try {
+                const response = await fetch(`https://transfer.sh/${encodeURIComponent(file.name)}`, {
+                    method: 'PUT',
+                    body: file,
+                    headers: {
+                        'Content-Type': 'application/octet-stream'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const url = await response.text();
+                console.log('✅ Transfer.sh上传成功:', url);
+                
+                if (url.startsWith('https://transfer.sh/')) {
+                    return url;
+                } else {
+                    throw new Error('Transfer.sh返回无效URL');
+                }
+            } catch (error) {
+                console.error('❌ Transfer.sh上传失败:', error);
+                throw new Error(`Transfer.sh上传失败: ${error.message}`);
+            }
+        }
+
+        async uploadWithFallback(file) {
+            const fileType = getMediaType(file);
+            const isVideo = fileType === 'video';
+            
+            console.log(`📁 文件类型: ${fileType}, 是视频: ${isVideo}`);
+            
+            // 如果是视频，优先使用支持视频的图床
+            if (isVideo) {
+                const videoHosts = this.hosts.filter(h => 
+                    h.healthy && !this.failedHosts.has(h.name) && h.supportsVideo
+                );
+                
+                if (videoHosts.length > 0) {
+                    for (let host of videoHosts) {
+                        try {
+                            console.log(`🎥 尝试使用视频图床 ${host.name}...`);
+                            const url = await host.upload(file);
+                            return { url, host: host.name };
+                        } catch (error) {
+                            console.error(`❌ 视频图床 ${host.name} 失败:`, error.message);
+                            this.failedHosts.add(host.name);
+                            setTimeout(() => {
+                                this.failedHosts.delete(host.name);
+                            }, 300000);
+                        }
+                    }
+                }
+                
+                // 视频图床都失败了，尝试普通图床
+                console.log('⚠️ 视频图床都失败，尝试普通图床...');
+            }
+            
+            // 普通文件或视频备用：使用权重轮换
+            const healthyHosts = this.hosts.filter(h => 
+                h.healthy && !this.failedHosts.has(h.name) && !h.supportsVideo
+            );
+            
+            const totalWeight = healthyHosts.reduce((sum, h) => sum + h.weight, 0);
+            let random = Math.random() * totalWeight;
+            let selectedHost = healthyHosts[0];
+
             for (let host of healthyHosts) {
-                try {
-                    console.log(`尝试使用 ${host.name} 上传...`);
-                    const url = await host.upload(file);
-                    console.log(`✅ ${host.name} 上传成功`);
-                    return { url, host: host.name };
-                } catch (error) {
-                    console.error(`❌ ${host.name} 上传失败:`, error.message);
-                    this.failedHosts.add(host.name);
-                    // 5分钟后恢复
-                    setTimeout(() => {
-                        this.failedHosts.delete(host.name);
-                    }, 300000);
+                random -= host.weight;
+                if (random <= 0) {
+                    selectedHost = host;
+                    break;
                 }
             }
-            
-            throw new Error('所有图床都不可用');
+
+            try {
+                console.log(`🔄 尝试使用 ${selectedHost.name} 上传...`);
+                const url = await selectedHost.upload(file);
+                console.log(`✅ ${selectedHost.name} 上传成功`);
+                return { url, host: selectedHost.name };
+            } catch (error) {
+                console.error(`❌ ${selectedHost.name} 上传失败:`, error.message);
+                this.failedHosts.add(selectedHost.name);
+                setTimeout(() => {
+                    this.failedHosts.delete(selectedHost.name);
+                }, 300000);
+                
+                // 递归尝试下一个
+                return await this.uploadWithFallback(file);
+            }
         }
 
         getActiveHosts() {
@@ -1215,12 +1299,17 @@
                  onerror="this.classList.add('error-image')"
                  onload="console.log('✅ 图片加载成功')">`;
         
+        // 如果是Transfer.sh的视频，添加有效期提示
+        const transferWarning = mediaData.host === 'transfer' ? 
+            '<div class="transfer-warning">14天有效</div>' : '';
+        
         const mediaItem = document.createElement('div');
         mediaItem.className = 'media-item fade-in';
         mediaItem.dataset.id = mediaData.id;
         mediaItem.innerHTML = `
             <button class="delete-btn" onclick="requestDelete('${mediaData.id}')">×</button>
             ${mediaContent}
+            ${transferWarning}
             <div class="media-badge">${typeInfo.badge} • ${mediaData.host}</div>
             <div class="media-protection">
                 <div class="protection-icon">🔒</div>
@@ -1504,4 +1593,5 @@
 </script>
 </body>
 </html>
-              
+
+ 
