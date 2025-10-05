@@ -545,58 +545,104 @@
             color: #888;
         }
 
-        .cold-storage-section {
-            background: #1a1a1a;
-            padding: 20px;
-            border-radius: 12px;
-            margin-top: 30px;
-            border: 1px dashed #444;
-        }
-
-        .cold-storage-header {
+        .sort-controls {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
         }
 
-        .cold-media-item {
+        .sort-btn {
+            padding: 6px 12px;
+            border: 1px solid #555;
+            border-radius: 6px;
             background: #2a2a2a;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            border: 1px solid #444;
+            color: #b0b0b0;
             cursor: pointer;
+            font-size: 12px;
             transition: all 0.3s;
         }
 
-        .cold-media-item:hover {
-            background: #333;
-            border-color: #555;
+        .sort-btn.active {
+            background: #444;
+            color: #e0e0e0;
+            border-color: #764ba2;
         }
 
-        .cold-media-info {
-            display: flex;
-            justify-content: between;
-            align-items: center;
-        }
-
-        .reactivate-btn {
-            background: #764ba2;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        .system-warning {
+        .storage-warning {
             background: #f39c12;
             color: white;
-            padding: 10px;
-            border-radius: 5px;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: center;
+            display: none;
+        }
+
+        .cleanup-modal {
+            max-width: 600px;
+            text-align: left;
+        }
+
+        .cleanup-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 15px 0;
+            border: 1px solid #444;
+            border-radius: 6px;
+            background: #222;
+        }
+
+        .cleanup-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            border-bottom: 1px solid #333;
+        }
+
+        .cleanup-item:last-child {
+            border-bottom: none;
+        }
+
+        .cleanup-item input {
+            margin-right: 10px;
+        }
+
+        .cleanup-info {
+            flex: 1;
+        }
+
+        .cleanup-filename {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .cleanup-details {
+            font-size: 11px;
+            color: #888;
+        }
+
+        .backup-options {
+            margin-top: 15px;
+            padding: 15px;
+            background: #222;
+            border-radius: 6px;
+            border: 1px solid #444;
+        }
+
+        .backup-option {
             margin: 10px 0;
+        }
+
+        .backup-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-right: 10px;
         }
 
         .apple-tips {
@@ -622,15 +668,23 @@
     </style>
 </head>
 <body>
-    <div class="sync-status" id="syncStatus">✅ 就绪</div>
+    <div class="sync-status" id="syncStatus">✅ 云端同步正常</div>
+    
+    <!-- 存储预警提示 -->
+    <div class="storage-warning" id="storageWarning">
+        <strong>💡 存储优化建议</strong>
+        <p>您的相册存储已使用90%，建议清理部分早期照片释放空间</p>
+        <button class="backup-btn" onclick="showCleanupInterface()">查看清理建议</button>
+        <button class="modal-cancel" onclick="hideStorageWarning()">稍后提醒</button>
+    </div>
     
     <div class="login-container" id="loginPage">
         <div class="logo">🔒</div>
-        <h1 class="title">秘密基地</h1>
-        <p class="subtitle">支持照片、Live图、视频的私密存储</p>
+        <h1 class="title">秘密基地☁️</h1>
+        <p class="subtitle">支持照片、Live图、视频的私密存储 · 云端同步</p>
         <input type="password" class="password-input" id="password" placeholder="请输入访问密码">
         <button class="login-btn" onclick="checkPassword()">进入相册</button>
-        <p style="margin-top: 25px; color: #888; font-size: 14px;">📸 支持图片 · 🎞️ 支持Live图 · 🎥 支持视频</p>
+        <p style="margin-top: 25px; color: #888; font-size: 14px;">📸 支持图片 · 🎞️ 支持Live图 · 🎥 支持视频 · ☁️ 云端同步</p>
     </div>
     
     <div class="album-container" id="albumPage">
@@ -658,9 +712,15 @@
                     <div class="stat-label">存储使用</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-value" id="coldStorageCount">0</div>
-                    <div class="stat-label">归档图片</div>
+                    <div class="stat-value" id="totalViews">0</div>
+                    <div class="stat-label">总浏览量</div>
                 </div>
+            </div>
+            
+            <div class="sort-controls">
+                <span style="color: #aaa; font-size: 13px; margin-right: 10px;">排序:</span>
+                <button class="sort-btn active" onclick="setSortOrder('time')">最新优先</button>
+                <button class="sort-btn" onclick="setSortOrder('popular')">热度优先</button>
             </div>
         </div>
         
@@ -695,16 +755,9 @@
                 <p>上传第一个文件开始你的秘密基地吧！</p>
             </div>
         </div>
-
-        <div class="cold-storage-section" id="coldStorageSection" style="display: none;">
-            <div class="cold-storage-header">
-                <h3 style="color: #e0e0e0;">🗄️ 归档图片 (超过30天未访问)</h3>
-                <button class="reactivate-btn" onclick="reactivateAllColdMedia()">全部激活</button>
-            </div>
-            <div id="coldStorageList"></div>
-        </div>
     </div>
     
+    <!-- 解锁模态框 -->
     <div class="modal" id="unlockModal">
         <div class="modal-content">
             <div style="font-size: 32px; margin-bottom: 15px; opacity: 0.8;">🔓</div>
@@ -718,6 +771,7 @@
         </div>
     </div>
     
+    <!-- 批量解锁模态框 -->
     <div class="modal" id="bulkUnlockModal">
         <div class="modal-content">
             <div style="font-size: 32px; margin-bottom: 15px; opacity: 0.8;">🔑</div>
@@ -731,6 +785,7 @@
         </div>
     </div>
 
+    <!-- 删除确认模态框 -->
     <div class="modal" id="deleteModal">
         <div class="modal-content">
             <div style="font-size: 32px; margin-bottom: 15px; opacity: 0.8;">🗑️</div>
@@ -743,22 +798,437 @@
         </div>
     </div>
 
+    <!-- 清理选择模态框 -->
+    <div class="modal" id="cleanupModal">
+        <div class="modal-content cleanup-modal">
+            <div style="font-size: 32px; margin-bottom: 15px; opacity: 0.8;">🧹</div>
+            <h3 style="color: #e0e0e0; margin-bottom: 10px;">存储空间优化</h3>
+            <p style="margin: 15px 0; color: #aaa; font-size: 13px;">您的存储空间已使用90%，请选择要清理的早期文件（已按时间排序）</p>
+            
+            <div class="cleanup-list" id="cleanupList">
+                <!-- 清理项目将动态添加到这里 -->
+            </div>
+            
+            <div class="backup-options">
+                <p style="margin-bottom: 10px; color: #e0e0e0; font-size: 13px;">💾 备份选项：</p>
+                <div class="backup-option">
+                    <button class="backup-btn" onclick="generateBackup()">📦 生成备份文件</button>
+                    <span style="color: #aaa; font-size: 12px;">下载选中文件的ZIP备份</span>
+                </div>
+                <div class="backup-option">
+                    <button class="backup-btn" onclick="createTempBackup()">🔗 创建临时链接</button>
+                    <span style="color: #aaa; font-size: 12px;">生成14天有效的下载链接</span>
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="modal-btn modal-confirm" onclick="executeCleanup()">确认清理选中项</button>
+                <button class="modal-btn modal-cancel" onclick="closeCleanupModal()">取消</button>
+            </div>
+        </div>
+    </div>
 <script>
     // ==================== 配置区域 ====================
     const ACCESS_PASSWORD = "LLY123";
     const DOWNLOAD_PASSWORD = "lly最帅";
     const UPLOAD_PASSWORD = "111111111";
+    
+    // Supabase 配置 - 请替换为您的实际配置
+    const SUPABASE_URL = "https://atbyxkeoyyoslvigsort.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0Ynl4a2VveXlvc2x2aWdzb3J0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1ODYxMzcsImV4cCI6MjA3NTE2MjEzN30.i3McefQGI9ihjCmbzhIPRRl7tHIL3NmTci59DQziEzg";
 
-    // ==================== 苹果设备检测 ====================
-    function checkAppleDevice() {
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        const isMac = /Macintosh|MacIntel|MacPPC|Mac68K/.test(navigator.userAgent);
-        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-        
-        return { isApple: isIOS || isMac, isSafari };
+    // ==================== 核心管理器类 ====================
+
+    // 云端数据管理器
+    class CloudDataManager {
+        constructor() {
+            this.supabase = null;
+            this.isInitialized = false;
+            this.cache = {
+                data: null,
+                timestamp: 0,
+                ttl: 5 * 60 * 1000 // 5分钟缓存
+            };
+            this.initializeSupabase();
+        }
+
+        async initializeSupabase() {
+            if (window.supabase) {
+                this.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                this.isInitialized = true;
+                console.log('✅ Supabase 初始化完成');
+                return;
+            }
+
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+                script.onload = () => {
+                    this.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                    this.isInitialized = true;
+                    console.log('✅ Supabase 初始化完成');
+                    resolve();
+                };
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        async saveMedia(mediaData) {
+            try {
+                if (!this.isInitialized) {
+                    await this.initializeSupabase();
+                }
+
+                console.log('📡 保存到云端:', mediaData.filename);
+
+                const { data, error } = await this.supabase
+                    .from('secret_media')
+                    .insert([{
+                        filename: mediaData.filename,
+                        url: mediaData.url,
+                        host: mediaData.host,
+                        media_type: mediaData.type,
+                        file_size: mediaData.size
+                    }])
+                    .select();
+
+                if (error) throw error;
+
+                console.log('✅ 云端保存成功:', data[0].id);
+                this.clearCache();
+                return { ...mediaData, id: data[0].id, isCloud: true };
+            } catch (error) {
+                console.error('❌ 云端保存失败:', error);
+                return this.saveToLocalStorage(mediaData);
+            }
+        }
+
+        async loadMedia() {
+            // 检查缓存
+            if (this.cache.data && Date.now() - this.cache.timestamp < this.cache.ttl) {
+                console.log('📦 使用缓存数据');
+                return this.cache.data;
+            }
+
+            try {
+                if (!this.isInitialized) {
+                    await this.initializeSupabase();
+                }
+
+                console.log('📡 从云端加载数据...');
+
+                const { data, error } = await this.supabase
+                    .from('secret_media')
+                    .select('*')
+                    .order('upload_time', { ascending: false });
+
+                if (error) throw error;
+
+                const mediaData = data.map(item => ({
+                    id: item.id,
+                    filename: item.filename,
+                    url: item.url,
+                    host: item.host,
+                    type: item.media_type,
+                    timestamp: item.upload_time,
+                    size: item.file_size,
+                    uploadDate: new Date(item.upload_time).toLocaleDateString('zh-CN'),
+                    viewCount: item.view_count,
+                    isCloud: true
+                }));
+
+                console.log(`✅ 从云端加载 ${mediaData.length} 个文件`);
+                
+                // 更新缓存
+                this.cache.data = mediaData;
+                this.cache.timestamp = Date.now();
+                
+                // 记录访问统计
+                this.recordBatchAccess(data.map(item => item.id));
+                
+                return mediaData;
+            } catch (error) {
+                console.error('❌ 云端加载失败:', error);
+                return this.loadFromLocalStorage();
+            }
+        }
+
+        async recordBatchAccess(mediaIds) {
+            if (!mediaIds.length || !this.isInitialized) return;
+            
+            try {
+                await this.supabase
+                    .from('secret_media')
+                    .update({ 
+                        view_count: this.supabase.raw('view_count + 1'),
+                        last_accessed: new Date().toISOString()
+                    })
+                    .in('id', mediaIds);
+            } catch (error) {
+                console.warn('访问统计记录失败:', error);
+            }
+        }
+
+        async deleteMedia(mediaId) {
+            try {
+                if (!this.isInitialized) {
+                    await this.initializeSupabase();
+                }
+
+                // 删除云端数据
+                if (mediaId.length > 20) { // UUID判断
+                    const { error } = await this.supabase
+                        .from('secret_media')
+                        .delete()
+                        .eq('id', mediaId);
+
+                    if (error) throw error;
+                    console.log('✅ 从云端删除成功');
+                }
+                
+                // 删除本地缓存
+                this.deleteFromLocalStorage(mediaId);
+                this.clearCache();
+                return true;
+            } catch (error) {
+                console.error('❌ 云端删除失败:', error);
+                return this.deleteFromLocalStorage(mediaId);
+            }
+        }
+
+        async getStats() {
+            try {
+                if (!this.isInitialized) {
+                    await this.initializeSupabase();
+                }
+
+                const { data, error } = await this.supabase
+                    .from('secret_media')
+                    .select('id, file_size, view_count');
+
+                if (error) throw error;
+
+                const totalSize = data.reduce((sum, item) => sum + (item.file_size || 0), 0);
+                const totalViews = data.reduce((sum, item) => sum + (item.view_count || 0), 0);
+
+                return {
+                    totalFiles: data.length,
+                    totalSize: (totalSize / 1024 / 1024).toFixed(2) + 'MB',
+                    totalViews: totalViews,
+                    cloudStatus: '✅ 云端同步正常'
+                };
+            } catch (error) {
+                console.error('获取统计失败:', error);
+                const localData = this.loadFromLocalStorage();
+                return {
+                    totalFiles: localData.length,
+                    totalSize: this.getLocalStorageSize(),
+                    totalViews: 0,
+                    cloudStatus: '⚠️ 本地模式'
+                };
+            }
+        }
+
+        async checkStorageUsage() {
+            try {
+                if (!this.isInitialized) return { used: 0, total: 500, percentage: 0 };
+                
+                const { data, error } = await this.supabase
+                    .from('secret_media')
+                    .select('file_size');
+                    
+                if (error) throw error;
+                
+                const totalSize = data.reduce((sum, item) => sum + (item.file_size || 0), 0);
+                const usedMB = totalSize / 1024 / 1024;
+                const percentage = (usedMB / 500) * 100;
+                
+                return {
+                    used: usedMB,
+                    total: 500,
+                    percentage: percentage
+                };
+            } catch (error) {
+                console.error('检查存储使用失败:', error);
+                return { used: 0, total: 500, percentage: 0 };
+            }
+        }
+
+        async getCleanupCandidates(limit = 50) {
+            try {
+                if (!this.isInitialized) {
+                    await this.initializeSupabase();
+                }
+
+                const { data, error } = await this.supabase
+                    .from('secret_media')
+                    .select('*')
+                    .order('upload_time', { ascending: true })
+                    .limit(limit);
+
+                if (error) throw error;
+
+                return data.map(item => ({
+                    id: item.id,
+                    filename: item.filename,
+                    url: item.url,
+                    type: item.media_type,
+                    uploadTime: item.upload_time,
+                    viewCount: item.view_count,
+                    lastAccessed: item.last_accessed,
+                    size: item.file_size
+                }));
+            } catch (error) {
+                console.error('获取清理候选失败:', error);
+                return [];
+            }
+        }
+
+        clearCache() {
+            this.cache.data = null;
+            this.cache.timestamp = 0;
+        }
+
+        // 本地存储降级方案
+        saveToLocalStorage(mediaData) {
+            try {
+                const existingData = this.loadFromLocalStorage();
+                const newData = [...existingData, { ...mediaData, local: true }];
+                localStorage.setItem('secretBaseMediaData', JSON.stringify(newData));
+                console.log('📱 降级到本地存储');
+                return mediaData;
+            } catch (error) {
+                console.error('本地存储失败:', error);
+                return mediaData;
+            }
+        }
+
+        loadFromLocalStorage() {
+            try {
+                const data = localStorage.getItem('secretBaseMediaData');
+                return data ? JSON.parse(data) : [];
+            } catch (error) {
+                console.error('本地加载失败:', error);
+                return [];
+            }
+        }
+
+        deleteFromLocalStorage(mediaId) {
+            try {
+                const existingData = this.loadFromLocalStorage();
+                const newData = existingData.filter(item => item.id !== mediaId);
+                localStorage.setItem('secretBaseMediaData', JSON.stringify(newData));
+                return true;
+            } catch (error) {
+                console.error('本地删除失败:', error);
+                return false;
+            }
+        }
+
+        getLocalStorageSize() {
+            const data = localStorage.getItem('secretBaseMediaData');
+            if (!data) return '0MB';
+            return (new Blob([data]).size / 1024 / 1024).toFixed(2) + 'MB';
+        }
+
+        saveAll(data) {
+            return this.saveToLocalStorage(data);
+        }
     }
 
-    // ==================== 智能图床管理器 ====================
+    // 存储监控管理器
+    class StorageMonitor {
+        constructor() {
+            this.warningThreshold = 450; // MB - 预警阈值
+            this.cleanupThreshold = 480; // MB - 清理阈值
+            this.cleanupPercentage = 1; // 清理百分比
+            this.isMonitoring = false;
+            this.checkInterval = 300000; // 5分钟检查一次
+        }
+
+        startMonitoring() {
+            if (this.isMonitoring) return;
+            
+            this.isMonitoring = true;
+            this.checkStorage();
+            
+            // 定期检查
+            setInterval(() => {
+                this.checkStorage();
+            }, this.checkInterval);
+            
+            console.log('🔍 存储监控已启动');
+        }
+
+        async checkStorage() {
+            try {
+                const usage = await cloudDataManager.checkStorageUsage();
+                
+                // 更新界面显示
+                document.getElementById('storageUsed').textContent = usage.used.toFixed(2) + 'MB';
+                
+                // 检查是否需要预警
+                if (usage.used >= this.warningThreshold) {
+                    this.showStorageWarning(usage);
+                }
+                
+                // 检查是否需要自动清理
+                if (usage.used >= this.cleanupThreshold) {
+                    await this.autoCleanup();
+                }
+            } catch (error) {
+                console.error('存储检查失败:', error);
+            }
+        }
+
+        showStorageWarning(usage) {
+            // 只有上传者能看到预警
+            if (!isUploader) return;
+            
+            const warningEl = document.getElementById('storageWarning');
+            warningEl.innerHTML = `
+                <strong>💡 存储优化建议</strong>
+                <p>您的相册存储已使用${usage.percentage.toFixed(1)}% (${usage.used.toFixed(2)}MB/${usage.total}MB)，建议清理部分早期照片释放空间</p>
+                <button class="backup-btn" onclick="showCleanupInterface()">查看清理建议</button>
+                <button class="modal-cancel" onclick="hideStorageWarning()">稍后提醒</button>
+            `;
+            warningEl.style.display = 'block';
+        }
+
+        async autoCleanup() {
+            console.log('🔄 自动清理触发');
+            
+            try {
+                // 获取1%的清理候选
+                const allMedia = await cloudDataManager.loadMedia();
+                const cleanupCount = Math.max(1, Math.floor(allMedia.length * this.cleanupPercentage / 100));
+                const candidates = await cloudDataManager.getCleanupCandidates(cleanupCount);
+                
+                if (candidates.length === 0) return;
+                
+                // 执行自动清理
+                for (const candidate of candidates) {
+                    await cloudDataManager.deleteMedia(candidate.id);
+                }
+                
+                // 生成备份通知
+                this.notifyAutoCleanup(candidates);
+                
+                console.log(`✅ 自动清理完成: ${candidates.length} 个文件`);
+            } catch (error) {
+                console.error('自动清理失败:', error);
+            }
+        }
+
+        notifyAutoCleanup(cleanedFiles) {
+            if (!isUploader) return;
+            
+            alert(`🔄 系统已自动清理 ${cleanedFiles.length} 个早期文件以释放存储空间\n\n如需备份，请在清理建议界面操作`);
+        }
+    }
+
+    // 图床管理器（优化版）
     class ImageHostManager {
         constructor() {
             this.hosts = [
@@ -795,9 +1265,8 @@
         }
 
         async uploadToImgBB(file) {
-            // 请在这里替换为您的ImgBB API密钥
             const IMGBB_API_KEY = "3dae31037fd4b1514369a2d9b8e969cd";
-            if (!IMGBB_API_KEY || IMGBB_API_KEY === "YOUR_IMGBB_API_KEY_HERE") {
+            if (!IMGBB_API_KEY || IMGBB_API_KEY === "您配置的API密钥") {
                 throw new Error('请配置ImgBB API密钥');
             }
 
@@ -922,7 +1391,6 @@
                     }
                 }
                 
-                // 视频图床都失败了，尝试普通图床
                 console.log('⚠️ 视频图床都失败，尝试普通图床...');
             }
             
@@ -965,178 +1433,38 @@
         }
     }
 
-    // ==================== 智能缓存管理器 ====================
-    class SmartCacheManager {
-        constructor() {
-            this.hotLimit = 200;
-            this.accessHistory = new Map();
-        }
+    // ==================== 全局变量 ====================
+    let currentMediaIndex = -1;
+    let unlockStates = [];
+    let currentFileType = 'all';
+    let deleteMediaId = null;
+    let currentSortOrder = 'time';
+    let isUploader = false;
+    let cleanupCandidates = [];
+
+    const imageHostManager = new ImageHostManager();
+    const cloudDataManager = new CloudDataManager();
+    const storageMonitor = new StorageMonitor();
+
+    // ==================== 工具函数 ====================
+
+    // 苹果设备检测
+    function checkAppleDevice() {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isMac = /Macintosh|MacIntel|MacPPC|Mac68K/.test(navigator.userAgent);
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
         
-        recordAccess(mediaId) {
-            const now = Date.now();
-            const history = this.accessHistory.get(mediaId) || { 
-                count: 0, 
-                lastAccess: 0,
-                firstAccess: now 
-            };
-            
-            history.count++;
-            history.lastAccess = now;
-            this.accessHistory.set(mediaId, history);
-        }
-        
-        manageStorage() {
-            const allMedia = cloudDataManager.loadMedia();
-            const now = Date.now();
-            const oneMonth = 30 * 24 * 60 * 60 * 1000;
-            
-            const hotData = [];
-            const coldData = [];
-            
-            allMedia.forEach(media => {
-                const history = this.accessHistory.get(media.id) || { lastAccess: 0, count: 0 };
-                const daysSinceLastAccess = (now - history.lastAccess) / (24 * 60 * 60 * 1000);
-                
-                if (daysSinceLastAccess <= 30 && history.count > 0) {
-                    hotData.push(media);
-                } else {
-                    coldData.push(media);
-                }
-            });
-            
-            if (hotData.length > this.hotLimit) {
-                hotData.sort((a, b) => {
-                    const countA = this.accessHistory.get(a.id)?.count || 0;
-                    const countB = this.accessHistory.get(b.id)?.count || 0;
-                    return countB - countA;
-                });
-                
-                const toCold = hotData.splice(this.hotLimit);
-                coldData.push(...toCold);
-            }
-            
-            cloudDataManager.saveAll(hotData);
-            this.saveColdStorage(coldData);
-            
-            console.log(`🔄 存储管理: ${hotData.length}张热数据, ${coldData.length}张冷数据`);
-            return { hotData, coldData };
-        }
-        
-        reactivateMedia(mediaId) {
-            const coldData = this.loadColdStorage();
-            const mediaIndex = coldData.findIndex(item => item.id === mediaId);
-            
-            if (mediaIndex !== -1) {
-                const [reactivatedMedia] = coldData.splice(mediaIndex, 1);
-                this.saveColdStorage(coldData);
-                
-                const hotData = cloudDataManager.loadMedia();
-                hotData.push(reactivatedMedia);
-                cloudDataManager.saveAll(hotData);
-                
-                this.recordAccess(mediaId);
-                
-                console.log(`🔥 重新激活: ${reactivatedMedia.filename}`);
-                return reactivatedMedia;
-            }
-            return null;
-        }
-        
-        saveColdStorage(data) {
-            try {
-                localStorage.setItem('coldStorageData', JSON.stringify(data));
-            } catch (error) {
-                console.error('保存冷数据失败:', error);
-            }
-        }
-        
-        loadColdStorage() {
-            try {
-                const data = localStorage.getItem('coldStorageData');
-                return data ? JSON.parse(data) : [];
-            } catch (error) {
-                console.error('加载冷数据失败:', error);
-                return [];
-            }
-        }
-        
-        getColdStorageStats() {
-            const coldData = this.loadColdStorage();
-            return {
-                count: coldData.length,
-                size: (new Blob([JSON.stringify(coldData)]).size / 1024 / 1024).toFixed(2) + 'MB'
-            };
-        }
+        return { isApple: isIOS || isMac, isSafari };
     }
 
-    // ==================== 云端数据管理器 ====================
-    class CloudDataManager {
-        constructor() {
-            this.storageKey = 'secretBaseMediaData';
-        }
-
-        saveMedia(mediaData) {
-            try {
-                const existingData = this.loadMedia();
-                const newData = [...existingData, mediaData];
-                localStorage.setItem(this.storageKey, JSON.stringify(newData));
-                return true;
-            } catch (error) {
-                console.error('保存数据失败:', error);
-                return false;
-            }
-        }
-
-        loadMedia() {
-            try {
-                const data = localStorage.getItem(this.storageKey);
-                return data ? JSON.parse(data) : [];
-            } catch (error) {
-                console.error('加载数据失败:', error);
-                return [];
-            }
-        }
-
-        saveAll(data) {
-            try {
-                localStorage.setItem(this.storageKey, JSON.stringify(data));
-                return true;
-            } catch (error) {
-                console.error('保存所有数据失败:', error);
-                return false;
-            }
-        }
-
-        deleteMedia(mediaId) {
-            try {
-                const existingData = this.loadMedia();
-                const newData = existingData.filter(item => item.id !== mediaId);
-                localStorage.setItem(this.storageKey, JSON.stringify(newData));
-                return true;
-            } catch (error) {
-                console.error('删除数据失败:', error);
-                return false;
-            }
-        }
-
-        getStorageSize() {
-            const data = localStorage.getItem(this.storageKey);
-            if (!data) return '0MB';
-            const sizeInBytes = new Blob([data]).size;
-            return (sizeInBytes / 1024 / 1024).toFixed(2) + 'MB';
-        }
-    }
-
-    // ==================== 文件类型设置 ====================
+    // 文件类型设置
     function setFileType(type) {
         currentFileType = type;
         const fileInput = document.getElementById('fileInput');
         const buttons = document.querySelectorAll('.file-type-btn');
         
-        // 移除所有active类
         buttons.forEach(btn => btn.classList.remove('active'));
         
-        // 给点击的按钮添加active类
         if (event && event.target) {
             event.target.classList.add('active');
         }
@@ -1158,7 +1486,7 @@
         }
     }
 
-    // ==================== 媒体类型检测 ====================
+    // 媒体类型检测
     function getMediaType(file) {
         const fileName = file.name.toLowerCase();
         const fileType = file.type.toLowerCase();
@@ -1196,7 +1524,20 @@
         }
     }
 
-    // ==================== 文件上传逻辑 ====================
+    // 排序设置
+    function setSortOrder(order) {
+        currentSortOrder = order;
+        const buttons = document.querySelectorAll('.sort-btn');
+        
+        buttons.forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        loadAllMedia();
+    }
+
+    // ==================== 核心功能函数 ====================
+
+    // 上传媒体文件
     async function uploadMedia() {
         const fileInput = document.getElementById('fileInput');
         const files = fileInput.files;
@@ -1206,11 +1547,14 @@
             return;
         }
 
+        // 验证上传密码
         const uploadPassword = prompt('请输入上传密码：');
         if (uploadPassword !== UPLOAD_PASSWORD) {
             alert('❌ 上传密码错误！');
             return;
         }
+
+        isUploader = true; // 标记为上传者
 
         // 苹果设备特殊提示
         const { isApple } = checkAppleDevice();
@@ -1240,14 +1584,12 @@
             try {
                 const uploadResult = await imageHostManager.uploadWithFallback(file);
                 
-                // 🚨 重要检查：确保上传结果有效
                 if (!uploadResult || !uploadResult.url) {
                     alert(`❌ 文件 "${file.name}" 上传失败：未获得有效URL`);
                     skippedCount++;
                     continue;
                 }
                 
-                // 检查URL格式
                 if (!uploadResult.url.startsWith('http') && !uploadResult.url.startsWith('data:')) {
                     alert(`❌ 文件 "${file.name}" 上传失败：URL格式错误`);
                     skippedCount++;
@@ -1265,10 +1607,9 @@
                     uploadDate: new Date().toLocaleDateString('zh-CN')
                 };
                 
-                const saved = await cloudDataManager.saveMedia(mediaData);
-                if (saved) {
-                    createAndDisplayMediaItem(mediaData);
-                    cacheManager.recordAccess(mediaData.id);
+                const savedMedia = await cloudDataManager.saveMedia(mediaData);
+                if (savedMedia) {
+                    createAndDisplayMediaItem(savedMedia);
                     uploadedCount++;
                 }
             } catch (error) {
@@ -1288,7 +1629,7 @@
         fileInput.value = '';
     }
 
-    // ==================== 媒体显示和管理 ====================
+    // 创建并显示媒体项目
     function createAndDisplayMediaItem(mediaData) {
         const gallery = document.getElementById('mediaGallery');
         const typeInfo = getMediaTypeInfo(mediaData.type);
@@ -1307,7 +1648,7 @@
         mediaItem.className = 'media-item fade-in';
         mediaItem.dataset.id = mediaData.id;
         mediaItem.innerHTML = `
-            <button class="delete-btn" onclick="requestDelete('${mediaData.id}')">×</button>
+            ${isUploader ? `<button class="delete-btn" onclick="requestDelete('${mediaData.id}')">×</button>` : ''}
             ${mediaContent}
             ${transferWarning}
             <div class="media-badge">${typeInfo.badge} • ${mediaData.host}</div>
@@ -1325,58 +1666,32 @@
         gallery.appendChild(mediaItem);
     }
 
-    function loadAllMedia() {
-        // 先进行存储管理
-        const { hotData, coldData } = cacheManager.manageStorage();
-        
+    // 加载所有媒体文件
+    async function loadAllMedia() {
         const gallery = document.getElementById('mediaGallery');
         gallery.innerHTML = '';
         
-        if (hotData.length === 0 && coldData.length === 0) {
+        const mediaData = await cloudDataManager.loadMedia();
+        
+        if (mediaData.length === 0) {
             showEmptyState();
             return;
         }
 
-        // 按时间倒序显示热数据
-        hotData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        hotData.forEach(media => {
-            createAndDisplayMediaItem(media);
-            cacheManager.recordAccess(media.id);
-        });
+        // 排序
+        let sortedData = [...mediaData];
+        if (currentSortOrder === 'popular') {
+            sortedData.sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
+        } else {
+            sortedData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        }
 
-        // 显示冷数据区域
-        displayColdStorageSection(coldData);
+        // 显示
+        sortedData.forEach(media => {
+            createAndDisplayMediaItem(media);
+        });
         
         updateStats();
-    }
-
-    function displayColdStorageSection(coldData) {
-        const coldSection = document.getElementById('coldStorageSection');
-        const coldList = document.getElementById('coldStorageList');
-        
-        if (coldData.length > 0) {
-            coldSection.style.display = 'block';
-            coldList.innerHTML = '';
-            
-            coldData.forEach(media => {
-                const coldItem = document.createElement('div');
-                coldItem.className = 'cold-media-item';
-                coldItem.innerHTML = `
-                    <div class="cold-media-info">
-                        <div>
-                            <strong>${media.filename}</strong>
-                            <div style="color: #888; font-size: 12px; margin-top: 5px;">
-                                ${media.uploadDate} • ${media.host} • ${getMediaTypeInfo(media.type).name}
-                            </div>
-                        </div>
-                        <button class="reactivate-btn" onclick="reactivateMedia('${media.id}')">激活</button>
-                    </div>
-                `;
-                coldList.appendChild(coldItem);
-            });
-        } else {
-            coldSection.style.display = 'none';
-        }
     }
 
     function showEmptyState() {
@@ -1390,26 +1705,8 @@
         `;
     }
 
-    // ==================== 冷存储操作 ====================
-    function reactivateMedia(mediaId) {
-        const reactivatedMedia = cacheManager.reactivateMedia(mediaId);
-        if (reactivatedMedia) {
-            createAndDisplayMediaItem(reactivatedMedia);
-            loadAllMedia();
-            alert(`✅ 已激活图片: ${reactivatedMedia.filename}`);
-        }
-    }
+    // ==================== 密码验证和界面控制 ====================
 
-    function reactivateAllColdMedia() {
-        const coldData = cacheManager.loadColdStorage();
-        coldData.forEach(media => {
-            cacheManager.reactivateMedia(media.id);
-        });
-        loadAllMedia();
-        alert(`✅ 已激活所有归档图片 (${coldData.length}张)`);
-    }
-
-    // ==================== 其他功能函数 ====================
     function checkPassword() {
         const input = document.getElementById('password').value;
         if (input === ACCESS_PASSWORD) {
@@ -1427,6 +1724,8 @@
             }
             
             loadAllMedia();
+            storageMonitor.startMonitoring();
+            
             // 启动自动同步
             setInterval(() => {
                 loadAllMedia();
@@ -1443,8 +1742,11 @@
             document.getElementById('loginPage').style.display = 'flex';
             document.getElementById('albumPage').style.display = 'none';
             document.getElementById('password').value = '';
+            isUploader = false;
         }
     }
+
+    // ==================== 下载解锁功能 ====================
 
     function requestUnlock(mediaId) {
         currentMediaIndex = mediaId;
@@ -1462,61 +1764,31 @@
         } else {
             alert('❌ 下载密码错误！');
             document.getElementById('downloadPassword').value = '';
-            document.getElementById('downloadPassword').focus();
-        }
-    }
-
-    function unlockSingleMedia(mediaId) {
-        const mediaItem = document.querySelector(`.media-item[data-id="${mediaId}"]`);
-        if (mediaItem) {
-            mediaItem.classList.add('unlocked');
-        }
-    }
-
-    function enableAllDownloads() {
-        document.getElementById('bulkUnlockModal').style.display = 'flex';
-        document.getElementById('bulkDownloadPassword').value = '';
-        document.getElementById('bulkDownloadPassword').focus();
-    }
-
-    function verifyBulkDownloadPassword() {
-        const input = document.getElementById('bulkDownloadPassword').value;
-        if (input === DOWNLOAD_PASSWORD) {
-            const mediaItems = document.querySelectorAll('.media-item');
-            mediaItems.forEach(item => {
-                item.classList.add('unlocked');
-            });
-            closeBulkUnlockModal();
-            alert('🔓 所有文件已解锁！现在可以保存所有文件了。');
-        } else {
-            alert('❌ 下载密码错误！');
-            document.getElementById('bulkDownloadPassword').value = '';
             document.getElementById('bulkDownloadPassword').focus();
         }
     }
 
+    // ==================== 删除功能 ====================
+
     function requestDelete(mediaId) {
+        if (!isUploader) {
+            alert('❌ 只有上传者可以删除文件');
+            return;
+        }
+        
         deleteMediaId = mediaId;
         document.getElementById('deleteModal').style.display = 'flex';
     }
 
-    function confirmDelete() {
-        if (deleteMediaId) {
-            // 从热数据删除
-            cloudDataManager.deleteMedia(deleteMediaId);
+    async function confirmDelete() {
+        if (deleteMediaId && isUploader) {
+            await cloudDataManager.deleteMedia(deleteMediaId);
             
-            // 从冷数据删除
-            const coldData = cacheManager.loadColdStorage();
-            const newColdData = coldData.filter(item => item.id !== deleteMediaId);
-            cacheManager.saveColdStorage(newColdData);
-            
-            // 从页面删除
             const mediaItem = document.querySelector(`.media-item[data-id="${deleteMediaId}"]`);
             if (mediaItem) {
                 mediaItem.remove();
             }
             
-            // 重新加载显示
             loadAllMedia();
             
             closeDeleteModal();
@@ -1524,49 +1796,142 @@
         }
     }
 
-    function closeUnlockModal() { 
-        document.getElementById('unlockModal').style.display = 'none'; 
-    }
-    
-    function closeBulkUnlockModal() { 
-        document.getElementById('bulkUnlockModal').style.display = 'none'; 
-    }
-    
-    function closeDeleteModal() { 
-        document.getElementById('deleteModal').style.display = 'none'; 
-        deleteMediaId = null;
+    // ==================== 存储清理功能 ====================
+
+    function hideStorageWarning() {
+        document.getElementById('storageWarning').style.display = 'none';
     }
 
-    // ==================== 初始化设置 ====================
-    let currentMediaIndex = -1;
-    let unlockStates = [];
-    let currentFileType = 'all';
-    let deleteMediaId = null;
-
-    const imageHostManager = new ImageHostManager();
-    const cloudDataManager = new CloudDataManager();
-    const cacheManager = new SmartCacheManager();
-
-    // ==================== 初始化 ====================
-    document.addEventListener('contextmenu', function(e) {
-        const mediaItem = e.target.closest('.media-item');
-        if (mediaItem && !mediaItem.classList.contains('unlocked')) {
-            e.preventDefault();
-            alert('🔒 此文件受保护，需要解锁后才能保存');
+    async function showCleanupInterface() {
+        if (!isUploader) {
+            alert('❌ 只有上传者可以管理存储空间');
+            return;
         }
-    });
-    
-    document.getElementById('password').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') checkPassword();
-    });
-    
-    window.addEventListener('load', function() {
-        // 设置默认文件类型
-        setFileType('all');
-        document.getElementById('password').focus();
-        updateSyncStatus('✅ 就绪');
-        updateStats();
-    });
+        
+        hideStorageWarning();
+        
+        try {
+            cleanupCandidates = await cloudDataManager.getCleanupCandidates(50);
+            
+            if (cleanupCandidates.length === 0) {
+                alert('✅ 没有找到可清理的早期文件');
+                return;
+            }
+            
+            const cleanupList = document.getElementById('cleanupList');
+            cleanupList.innerHTML = '';
+            
+            cleanupCandidates.forEach((candidate, index) => {
+                const daysAgo = Math.floor((new Date() - new Date(candidate.uploadTime)) / (1000 * 60 * 60 * 24));
+                const item = document.createElement('div');
+                item.className = 'cleanup-item';
+                item.innerHTML = `
+                    <input type="checkbox" id="cleanup-${index}" checked>
+                    <div class="cleanup-info">
+                        <div class="cleanup-filename">${candidate.filename}</div>
+                        <div class="cleanup-details">
+                            ${getMediaTypeInfo(candidate.type).name} • 
+                            ${daysAgo}天前上传 • 
+                            ${candidate.viewCount || 0}次查看 •
+                            ${(candidate.size / 1024 / 1024).toFixed(2)}MB
+                        </div>
+                    </div>
+                `;
+                cleanupList.appendChild(item);
+            });
+            
+            document.getElementById('cleanupModal').style.display = 'flex';
+        } catch (error) {
+            alert('❌ 加载清理建议失败: ' + error.message);
+        }
+    }
+
+    function closeCleanupModal() {
+        document.getElementById('cleanupModal').style.display = 'none';
+        cleanupCandidates = [];
+    }
+
+    async function executeCleanup() {
+        const checkedItems = document.querySelectorAll('#cleanupList input[type="checkbox"]:checked');
+        
+        if (checkedItems.length === 0) {
+            alert('⚠️ 请选择要清理的文件');
+            return;
+        }
+        
+        if (!confirm(`确定要清理选中的 ${checkedItems.length} 个文件吗？`)) {
+            return;
+        }
+        
+        let cleanedCount = 0;
+        
+        for (let i = 0; i < checkedItems.length; i++) {
+            const index = parseInt(checkedItems[i].id.split('-')[1]);
+            const candidate = cleanupCandidates[index];
+            
+            if (candidate) {
+                const success = await cloudDataManager.deleteMedia(candidate.id);
+                if (success) cleanedCount++;
+            }
+        }
+        
+        closeCleanupModal();
+        loadAllMedia();
+        
+        alert(`✅ 已成功清理 ${cleanedCount} 个文件`);
+    }
+
+    async function generateBackup() {
+        const checkedItems = document.querySelectorAll('#cleanupList input[type="checkbox"]:checked');
+        
+        if (checkedItems.length === 0) {
+            alert('⚠️ 请选择要备份的文件');
+            return;
+        }
+        
+        const backupData = [];
+        
+        for (let i = 0; i < checkedItems.length; i++) {
+            const index = parseInt(checkedItems[i].id.split('-')[1]);
+            const candidate = cleanupCandidates[index];
+            
+            if (candidate) {
+                backupData.push({
+                    filename: candidate.filename,
+                    url: candidate.url,
+                    type: candidate.type,
+                    uploadTime: candidate.uploadTime
+                });
+            }
+        }
+        
+        // 创建备份文件
+        const backupBlob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+        const backupUrl = URL.createObjectURL(backupBlob);
+        
+        // 创建下载链接
+        const a = document.createElement('a');
+        a.href = backupUrl;
+        a.download = `secret-base-backup-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        alert(`✅ 备份文件已生成，包含 ${backupData.length} 个文件的链接`);
+    }
+
+    async function createTempBackup() {
+        const checkedItems = document.querySelectorAll('#cleanupList input[type="checkbox"]:checked');
+        
+        if (checkedItems.length === 0) {
+            alert('⚠️ 请选择要备份的文件');
+            return;
+        }
+        
+        alert('🔗 临时备份功能开发中...\n当前建议使用"生成备份文件"功能下载到本地');
+    }
+
+    // ==================== 工具函数 ====================
 
     function updateSyncStatus(message) {
         const statusEl = document.getElementById('syncStatus');
@@ -1581,17 +1946,51 @@
         }
     }
 
-    function updateStats() {
-        const mediaData = cloudDataManager.loadMedia();
-        const coldStats = cacheManager.getColdStorageStats();
+    async function updateStats() {
+        const stats = await cloudDataManager.getStats();
         
-        document.getElementById('totalPhotos').textContent = mediaData.length + coldStats.count;
+        document.getElementById('totalPhotos').textContent = stats.totalFiles;
         document.getElementById('activeHosts').textContent = imageHostManager.getActiveHosts();
-        document.getElementById('storageUsed').textContent = cloudDataManager.getStorageSize();
-        document.getElementById('coldStorageCount').textContent = coldStats.count;
+        document.getElementById('storageUsed').textContent = stats.totalSize;
+        document.getElementById('totalViews').textContent = stats.totalViews;
+        
+        updateSyncStatus(stats.cloudStatus);
     }
+
+    // 模态框控制函数
+    function closeUnlockModal() { 
+        document.getElementById('unlockModal').style.display = 'none'; 
+    }
+    
+    function closeBulkUnlockModal() { 
+        document.getElementById('bulkUnlockModal').style.display = 'none'; 
+    }
+    
+    function closeDeleteModal() { 
+        document.getElementById('deleteModal').style.display = 'none'; 
+        deleteMediaId = null;
+    }
+
+    // ==================== 初始化 ====================
+
+    document.addEventListener('contextmenu', function(e) {
+        const mediaItem = e.target.closest('.media-item');
+        if (mediaItem && !mediaItem.classList.contains('unlocked')) {
+            e.preventDefault();
+            alert('🔒 此文件受保护，需要解锁后才能保存');
+        }
+    });
+    
+    document.getElementById('password').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') checkPassword();
+    });
+    
+    window.addEventListener('load', function() {
+        setFileType('all');
+        document.getElementById('password').focus();
+        updateSyncStatus('✅ 就绪');
+    });
 </script>
 </body>
 </html>
 
- 
