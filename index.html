@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+	<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -94,8 +94,6 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
-            position: relative;
-            overflow: hidden;
         }
         
         .login-btn:hover {
@@ -105,23 +103,6 @@
         
         .login-btn:active {
             transform: translateY(0);
-        }
-        
-        /* 按钮波纹效果 */
-        .ripple {
-            position: absolute;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.6);
-            transform: scale(0);
-            animation: ripple 0.6s linear;
-            pointer-events: none;
-        }
-        
-        @keyframes ripple {
-            to {
-                transform: scale(4);
-                opacity: 0;
-            }
         }
         
         .header-bar {
@@ -216,8 +197,6 @@
             cursor: pointer;
             font-size: 16px;
             transition: all 0.3s;
-            position: relative;
-            overflow: hidden;
         }
         
         .upload-btn:hover { 
@@ -592,6 +571,37 @@
             border: 1px solid #444;
         }
 
+        .admin-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .admin-panel-content {
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .admin-panel.collapsed .admin-panel-content {
+            height: 0;
+            opacity: 0;
+        }
+
+        .admin-panel:not(.collapsed) .admin-panel-content {
+            height: auto;
+            opacity: 1;
+        }
+
+        .collapse-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .admin-panel.collapsed .collapse-icon {
+            transform: rotate(-90deg);
+        }
+
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -944,39 +954,44 @@
             </div>
         </div>
 
-        <div class="admin-panel">
-            <h3 style="color: #e0e0e0; margin-bottom: 15px;">📊 系统状态</h3>
-            <div class="stats">
-                <div class="stat-item">
-                    <div class="stat-value" id="totalPhotos">0</div>
-                    <div class="stat-label">总照片数</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="activeHosts">10</div>
-                    <div class="stat-label">可用图床</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="storageUsed">0MB</div>
-                    <div class="stat-label">存储使用</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="totalViews">0</div>
-                    <div class="stat-label">总浏览量</div>
-                </div>
+        <div class="admin-panel" id="adminPanel">
+            <div class="admin-panel-header" onclick="toggleAdminPanel()">
+                <h3 style="color: #e0e0e0; margin: 0;">📊 系统状态</h3>
+                <span class="collapse-icon">▼</span>
             </div>
-            
-            <!-- 图床状态显示 -->
-            <div style="margin-top: 15px;">
-                <h4 style="color: #e0e0e0; margin-bottom: 10px;">🛠️ 图床状态</h4>
-                <div id="hostStatus" style="font-size: 12px; color: #888; line-height: 1.4;">
-                    <!-- 图床状态将在这里显示 -->
+            <div class="admin-panel-content">
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalPhotos">0</div>
+                        <div class="stat-label">总照片数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="activeHosts">10</div>
+                        <div class="stat-label">可用图床</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="storageUsed">0MB</div>
+                        <div class="stat-label">存储使用</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalViews">0</div>
+                        <div class="stat-label">总浏览量</div>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="sort-controls">
-                <span style="color: #aaa; font-size: 13px; margin-right: 10px;">排序:</span>
-                <button class="sort-btn active" onclick="setSortOrder('time')">最新优先</button>
-                <button class="sort-btn" onclick="setSortOrder('popular')">热度优先</button>
+                
+                <!-- 图床状态显示 -->
+                <div style="margin-top: 15px;">
+                    <h4 style="color: #e0e0e0; margin-bottom: 10px;">🛠️ 图床状态</h4>
+                    <div id="hostStatus" style="font-size: 12px; color: #888; line-height: 1.4;">
+                        <!-- 图床状态将在这里显示 -->
+                    </div>
+                </div>
+                
+                <div class="sort-controls">
+                    <span style="color: #aaa; font-size: 13px; margin-right: 10px;">排序:</span>
+                    <button class="sort-btn active" onclick="setSortOrder('time')">最新优先</button>
+                    <button class="sort-btn" onclick="setSortOrder('popular')">热度优先</button>
+                </div>
             </div>
         </div>
         
@@ -1015,7 +1030,7 @@
             </div>
             
             <p class="upload-note" id="uploadNote">
-                💡 支持：JPG、PNG、HEIC图片 | MP4、MOV、AVI、MKV、WebM、FLV视频 | Live图 | 单个文件最大30MB
+                💡 支持：JPG、PNG、HEIC图片 | MP4、MOV、AVI、MKV、WebM、FLV视频 | Live图 | 图片最大31MB，视频最大100MB
             </p>
         </div>
         
@@ -2028,26 +2043,6 @@
         return { isApple: isIOS || isMac, isSafari };
     }
 
-    // 按钮波纹效果
-    function createRipple(event) {
-        const button = event.currentTarget;
-        const circle = document.createElement("span");
-        const diameter = Math.max(button.clientWidth, button.clientHeight);
-        const radius = diameter / 2;
-        
-        circle.style.width = circle.style.height = `${diameter}px`;
-        circle.style.left = `${event.clientX - button.getBoundingClientRect().left - radius}px`;
-        circle.style.top = `${event.clientY - button.getBoundingClientRect().top - radius}px`;
-        circle.classList.add("ripple");
-        
-        const ripple = button.getElementsByClassName("ripple")[0];
-        if (ripple) {
-            ripple.remove();
-        }
-        
-        button.appendChild(circle);
-    }
-
     // 文件类型设置
     function setFileType(type) {
         currentFileType = type;
@@ -2758,6 +2753,12 @@
         updateSyncStatus(stats.cloudStatus);
     }
 
+    // 系统状态面板折叠功能
+    function toggleAdminPanel() {
+        const adminPanel = document.getElementById('adminPanel');
+        adminPanel.classList.toggle('collapsed');
+    }
+
     // 模态框控制函数
     function closeUnlockModal() { 
         document.getElementById('unlockModal').style.display = 'none'; 
@@ -2784,11 +2785,6 @@
     
     // 文件选择变化时更新信息
     document.getElementById('fileInput').addEventListener('change', updateFileInfo);
-    
-    // 为所有按钮添加波纹效果
-    document.querySelectorAll('button').forEach(button => {
-        button.addEventListener('click', createRipple);
-    });
     
     // 拖拽上传功能
     const uploadSection = document.getElementById('uploadSection');
@@ -2826,4 +2822,3 @@
 </body>
 </html>
 
-                    
